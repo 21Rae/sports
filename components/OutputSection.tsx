@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Table, Code, Download, Copy, Check, BarChart2 } from 'lucide-react';
+import { Table, Code, Download, Copy, Check, BarChart2, Loader2 } from 'lucide-react';
 import { ExtractedDataset, AppMode } from '../types';
 import { DataTable } from './DataTable';
 import { DataJson } from './DataJson';
@@ -8,12 +8,13 @@ import { AnalysisView } from './AnalysisView';
 interface OutputSectionProps {
   datasets: { A: ExtractedDataset | null; B: ExtractedDataset | null };
   mode: AppMode;
+  isProcessing?: boolean;
 }
 
 type TabMode = 'data-a' | 'data-b' | 'analysis';
 type DataViewMode = 'table' | 'json';
 
-export const OutputSection: React.FC<OutputSectionProps> = ({ datasets, mode }) => {
+export const OutputSection: React.FC<OutputSectionProps> = ({ datasets, mode, isProcessing = false }) => {
   const [tabMode, setTabMode] = useState<TabMode>('data-a');
   const [dataViewMode, setDataViewMode] = useState<DataViewMode>('table');
   const [copied, setCopied] = useState(false);
@@ -107,11 +108,11 @@ export const OutputSection: React.FC<OutputSectionProps> = ({ datasets, mode }) 
 
             <button
               onClick={() => setTabMode('analysis')}
-              disabled={!hasAnyData}
+              disabled={!hasAnyData && !isProcessing}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
                 tabMode === 'analysis'
                   ? 'bg-white text-primary shadow-sm'
-                  : !hasAnyData ? 'text-slate-300 cursor-not-allowed' : 'text-slate-500 hover:text-slate-700'
+                  : (!hasAnyData && !isProcessing) ? 'text-slate-300 cursor-not-allowed' : 'text-slate-500 hover:text-slate-700'
               }`}
             >
               <BarChart2 size={16} /> Analyze
@@ -140,7 +141,7 @@ export const OutputSection: React.FC<OutputSectionProps> = ({ datasets, mode }) 
 
             <button
               onClick={handleCopy}
-              disabled={!activeDataset}
+              disabled={!activeDataset || isProcessing}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-500 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               title="Copy to Clipboard"
             >
@@ -148,14 +149,14 @@ export const OutputSection: React.FC<OutputSectionProps> = ({ datasets, mode }) 
             </button>
             <button
               onClick={handleDownloadCSV}
-              disabled={!activeDataset}
+              disabled={!activeDataset || isProcessing}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <Download size={16} />
             </button>
             <button
                onClick={handleDownloadJSON}
-               disabled={!activeDataset}
+               disabled={!activeDataset || isProcessing}
                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
              >
                <Code size={16} />
@@ -165,7 +166,18 @@ export const OutputSection: React.FC<OutputSectionProps> = ({ datasets, mode }) 
       </div>
 
       <div className="flex-1 overflow-hidden relative">
-        {!hasAnyData ? (
+        {isProcessing ? (
+           <div className="flex flex-col items-center justify-center h-full text-slate-500 animate-in fade-in duration-300 gap-4">
+             <div className="relative">
+               <div className="w-12 h-12 border-4 border-slate-100 rounded-full"></div>
+               <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
+             </div>
+             <div className="text-center">
+               <p className="font-semibold text-slate-700">Transforming your data</p>
+               <p className="text-sm text-slate-400 mt-1">Extracting entities and normalizing structure...</p>
+             </div>
+           </div>
+        ) : !hasAnyData ? (
            <div className="flex flex-col items-center justify-center h-full text-slate-400 p-8 text-center">
              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
                <div className="w-8 h-8 border-2 border-slate-300 rounded-md grid grid-cols-2 gap-0.5 p-0.5">

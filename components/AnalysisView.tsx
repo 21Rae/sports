@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Loader2 } from 'lucide-react';
+import { Send, Bot, User, Loader2, SlidersHorizontal, X } from 'lucide-react';
 import { ExtractedDataset, AnalysisMessage } from '../types';
 import { analyzeDataset } from '../services/geminiService';
 import { ChartRenderer } from './ChartRenderer';
@@ -20,7 +20,17 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ datasets }) => {
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Column Selection State
+  const [showColumnSelector, setShowColumnSelector] = useState(false);
+  const [selectedColumns, setSelectedColumns] = useState<Set<string>>(new Set());
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Extract unique columns from all datasets
+  const allColumns = React.useMemo(() => {
+    return Array.from(new Set(datasets.flatMap(d => d.columns))).sort();
+  }, [datasets]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -30,9 +40,26 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ datasets }) => {
     scrollToBottom();
   }, [messages]);
 
+  const toggleColumn = (col: string) => {
+    const next = new Set(selectedColumns);
+    if (next.has(col)) {
+      next.delete(col);
+    } else {
+      next.add(col);
+    }
+    setSelectedColumns(next);
+  };
+
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!input.trim() || isLoading) return;
+
+    // Construct the query with context
+    let enrichedQuery = input;
+    if (selectedColumns.size > 0) {
+      const cols = Array.from(selectedColumns).join(', ');
+      enrichedQuery += `\n\n[System Note]: The user has explicitly selected the following columns to focus this analysis and chart on: ${cols}. Prioritize these columns for the X-axis, Y-axis, or grouping dimensions in the chart.`;
+    }
 
     const userMessage: AnalysisMessage = {
       role: 'user',
@@ -45,7 +72,7 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ datasets }) => {
     setIsLoading(true);
 
     try {
-      const result = await analyzeDataset(datasets, userMessage.content);
+      const result = await analyzeDataset(datasets, enrichedQuery);
       
       const aiMessage: AnalysisMessage = {
         role: 'assistant',
@@ -112,13 +139,59 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ datasets }) => {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-4 bg-white border-t border-slate-200">
+      <div className="p-4 bg-white border-t border-slate-200 space-y-3">
+        {/* Column Selector Toggle & Display */}
+        <div className="flex flex-col gap-2">
+           <div className="flex items-center justify-between">
+              <button 
+                type="button"
+                onClick={() => setShowColumnSelector(!showColumnSelector)}
+                className={`flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full transition-all border ${
+                   showColumnSelector || selectedColumns.size > 0
+                    ? 'bg-indigo-50 border-indigo-200 text-indigo-700' 
+                    : 'bg-white border-slate-200 text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <SlidersHorizontal size={14} />
+                {selectedColumns.size > 0 ? `${selectedColumns.size} Columns Selected` : 'Select Columns to Chart'}
+              </button>
+              
+              {selectedColumns.size > 0 && (
+                <button 
+                  onClick={() => setSelectedColumns(new Set())}
+                  className="text-xs text-slate-400 hover:text-red-500 flex items-center gap-1"
+                >
+                  <X size={12} /> Clear
+                </button>
+              )}
+           </div>
+
+           {/* Collapsible Column List */}
+           {(showColumnSelector || selectedColumns.size > 0) && (
+             <div className="flex flex-wrap gap-2 animate-in slide-in-from-top-1 fade-in duration-200 max-h-[120px] overflow-y-auto custom-scrollbar p-1">
+               {allColumns.map(col => (
+                 <button
+                   key={col}
+                   onClick={() => toggleColumn(col)}
+                   className={`text-xs px-2.5 py-1 rounded-md border transition-all ${
+                     selectedColumns.has(col)
+                       ? 'bg-primary text-white border-primary shadow-sm'
+                       : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                   }`}
+                 >
+                   {col.replace(/_/g, ' ')}
+                 </button>
+               ))}
+             </div>
+           )}
+        </div>
+
         <form onSubmit={handleSubmit} className="relative flex items-center gap-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask a question about your data..."
+            placeholder={selectedColumns.size > 0 ? "Ask a question about the selected columns..." : "Ask a question about your data..."}
             className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary block p-3 pr-12 outline-none transition-all placeholder:text-slate-400"
           />
           <button

@@ -143,7 +143,11 @@ const App: React.FC = () => {
                    {processingState.message}
                 </div>
              )}
-             <OutputSection datasets={datasets} mode={mode} />
+             <OutputSection 
+               datasets={datasets} 
+               mode={mode} 
+               isProcessing={processingState.status === 'processing'} 
+             />
           </div>
 
         </div>

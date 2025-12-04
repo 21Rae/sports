@@ -85,10 +85,12 @@ export const analyzeDataset = async (datasets: ExtractedDataset[], query: string
 
       User Query: "${query}"
 
-      Your goal is to answer the user's question.
-      If there are multiple datasets, the user might ask to compare them.
-      
-      If the question implies a comparison, trend, or distribution that can be visualized, you MUST provide a chart configuration.
+      Your goal is to answer the user's question and visually represent the data.
+
+      CRITICAL RULE: You MUST ALWAYS provide a 'chart' configuration in your response, regardless of the question type.
+      - If the question is qualitative or text-based, quantify it (e.g., count occurrences, frequency, or map categories).
+      - If the question is about a single value (e.g., "total sales"), create a chart with that single value (e.g. a bar chart with one bar).
+      - If the question asks for a comparison, ensure the chart compares the relevant entities.
 
       Return a JSON object with the following structure:
       {
@@ -103,7 +105,6 @@ export const analyzeDataset = async (datasets: ExtractedDataset[], query: string
       }
 
       Rules for Charts:
-      - Only include "chart" if the data supports it and the user asks for something visualizable.
       - "data" in the chart object should be aggregated or formatted specifically for the chart.
       - If comparing two datasets (e.g., A vs B), merge the relevant data points into a single array if possible.
         Example: [{ "category": "Q1", "Dataset_A_Sales": 100, "Dataset_B_Sales": 150 }]
