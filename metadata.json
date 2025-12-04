@@ -1,0 +1,5 @@
+{
+  "name": "DataRefine",
+  "description": "Transform messy unstructured text into clean, structured datasets using Gemini AI. Export to CSV or JSON instantly.",
+  "requestFramePermissions": []
+}
